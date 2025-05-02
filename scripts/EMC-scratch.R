@@ -1,0 +1,69 @@
+##Packages!!====================================================================
+library(tidyverse)
+library(here)
+#the files======================================================================
+drone=read_csv(here::here("data/raw/Universal Project Data/uasdata.csv"))
+ocean=read_csv(here::here("data/raw/Universal Project Data/oce.indices.csv"))
+procedure=read_csv(here::here("data/raw/ESEAL_FORAGING_2024_REVISED.v2.csv"))
+
+skimr::skim(drone)
+skimr::skim(ocean)
+skimr::skim(procedure)
+
+#first look ploting ======================================================================
+##Basic (in class) ======================================================================
+basic=ggplot(data=drone, mapping = aes(x = width , y = length))+
+  geom_point(alpha=0.2, aes(color=class))+
+  theme_bw()+
+  scale_color_viridis_d()
+basic
+
+##cleaning- changing class/year to a factor ====================================================================== 
+
+drone.cleanv1 <- drone %>%
+  mutate(class.f = relevel(as.factor(class), 'male', 'female', 'pup' ), 
+         year.f = relevel(as.factor(year), '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'))
+write_csv(drone.cleanv1,"./data/cleaned/uascleanv1.csv" )
+
+#color palette 
+classpalette = c(
+  "male" = "#264653", 
+  "female" = "#2a9d8f", 
+  "pup" = "#9fe9e0")
+
+##plot: dodge by age class across years  ======================================================================
+
+fun=ggplot(data=drone.cleanv1, mapping = aes(x = year.f , y = length, color=class.f))+
+  geom_point(alpha = 0.2, position = position_dodge(width = 0.7)) +
+  #facet_grid(class.f~.,switch='y')+
+  theme_bw()+
+  scale_color_manual(values = classpalette)+
+  labs(y= "Polygon Length (m)", x= "Year", color="Class")
+fun
+
+
+#clean up an adult female dataset for comparisons 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
