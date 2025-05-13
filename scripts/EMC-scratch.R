@@ -95,17 +95,30 @@ procedure.3=procedure.2 %>%
 
 ###pivoting procedure.3- one consolidated "date" ======================================================================
 
-next
+#splitting into new dataframes by collection type
 
+deploy.1=procedure.3 %>% 
+  dplyr::select(ID,TOPPID, DeployDate, DeployYear, DeployMonth, DeployDay, DeployMass, `Deploy SL`, DeployAdipose) %>% 
+  rename(date=DeployDate, year=DeployYear, month=DeployMonth, day=DeployDay, 
+         mass=DeployMass, std.length=`Deploy SL`, adipose=DeployAdipose) %>% 
+  filter(between(year, 2016, 2025) & between(month, 1, 3)) %>% 
+  mutate('collection type'= "deployment")
 
+recover.1=procedure.3 %>% 
+  dplyr::select(ID,TOPPID, RecoverDate, RecoverYear, RecoverMonth, RecoverDay, RecoverMass, `Recover SL`, RecoverAdipose ) %>% 
+  rename(date=RecoverDate, year=RecoverYear, month=RecoverMonth, day=RecoverDay, 
+         mass=RecoverMass, std.length=`Recover SL`, adipose=RecoverAdipose) %>%
+  filter(between(year, 2016, 2025) & between(month, 1, 3)) %>%
+  mutate('collection.type'= "recovery")
 
-
-
-
-
-
-
-
+drone.3=drone.2 %>% 
+  dplyr::select(confidenc, date, year, month, day, class, length, width, area_m2,class.f, year.f) %>% 
+  mutate(length=length*100) %>% 
+  mutate('collection.type'= "drone")
+  
+#Modelling! " ======================================================================
+#i want to run a model to see how strongly/if drone standard length can predict procedure values, and the same for mass values
+#need to calculate mass estimates per drone 
 
 
 

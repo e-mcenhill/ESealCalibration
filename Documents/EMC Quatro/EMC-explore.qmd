@@ -90,11 +90,11 @@ fun
 
     -   procedure dataset dates are split into deploy and recover dates, so there are two dates associated with each animal
 
-    -   merging will potentially be a little fraught due to this, ask allison for advice
+    -   merging will potentially be a little fraught due to this, ask Allison for advice
 
 -   Allison advice:
 
-    -   Pivot(?) or otherwise mutate to make a column called "collection type" with "deploy", "recovery" and in procedure, and "drone" as the sole option in drone data, so that date can be consolidated into columns called "day" "month" and "year" and be further trimmed properly
+    -   Pivot(?) or otherwise mutate to make a column called "collection type" with "deploy", "recovery" and in procedure, and "drone" as the sole option in drone data, so that date can be consolidated into columns called "day" "month" and "year" and be cut via sep() a second time
 
 ### The code!
 
@@ -135,6 +135,7 @@ procedure.2 <- procedure.2 %>%
 #### Numerics
 
 -   I noticed in a console skim of the new .2 datasets that my new dates were assigned as characters, which is NOT awesome for filtering- to help prevent future issues, I manually assigned each of the new split-date columns in both datasets to be numeric vectors in batches using mutate() and as.numeric()
+    -   as.posixct() might work better
 
 ```{r}
 ###new date columns as numerics ======================================================================
@@ -170,6 +171,48 @@ procedure.3=procedure.2 %>%
   filter(between(DeployMonth, 1, 3)|between(RecoverMonth, 1, 3))
 ```
 
-#### More cleaning: "collection type" and "date  
+#### More cleaning: "collection type" and date columns  
 
--   In this section, I'm mutating collection type columns into drone.2 and procedure.3. In order to do this properly, I need to pivot my data (I think) since right now everything is by field ID, with deploy and recover, but I want each row split in 2, and every seal will be defined across 2 rows (its recovery and its deployment)
+In this section, I need to mutate collection type columns into drone.2 and procedure.3.
+
+-   drone.2 is easy to mutate in since I can just mutate a new column with "drone" as the value
+
+-   In order to do this in procedure.3 , I need to pivot my data first (I think) since right now everything is by field ID, with deploy and recover, but I want each row split in 2, and every seal will be defined across 2 rows (its recovery and its deployment)
+
+    -   \^HELP!! I have no idea if pivot is the right function or how to approach splitting/formatting procedure.3
+
+-   Allison says: split into 2 data frames, recovery and deploy, and then mutate columns in
+
+```{r}
+###pivoting procedure.3- one consolidated "date" ======================================================================
+#splitting into new dataframes by collection type, renaming cleaning, and filtering properly 
+
+deploy.1=procedure.3 %>% 
+  dplyr::select(ID,TOPPID, DeployDate, DeployYear, DeployMonth, DeployDay, DeployMass, `Deploy SL`, DeployAdipose) %>% 
+  rename(date=DeployDate, year=DeployYear, month=DeployMonth, day=DeployDay, 
+         mass=DeployMass, std.length=`Deploy SL`, adipose=DeployAdipose) %>% 
+  filter(between(year, 2016, 2025) & between(month, 1, 3)) %>% 
+  mutate('collection type'= "deployment")
+
+recover.1=procedure.3 %>% 
+  dplyr::select(ID,TOPPID, RecoverDate, RecoverYear, RecoverMonth, RecoverDay, RecoverMass, `Recover SL`, RecoverAdipose ) %>% 
+  rename(date=RecoverDate, year=RecoverYear, month=RecoverMonth, day=RecoverDay, 
+         mass=RecoverMass, std.length=`Recover SL`, adipose=RecoverAdipose) %>%
+  filter(between(year, 2016, 2025) & between(month, 1, 3)) %>%
+  mutate('collection.type'= "recovery")
+
+#cleaning drone data to filter to relevant information and follow a standard format 
+
+drone.3=drone.2 %>% 
+  dplyr::select(confidenc, date, year, month, day, class, length, width, area_m2,class.f, year.f) %>% 
+  mutate(length=length*100) %>% 
+  mutate('collection.type'= "drone")
+```
+
+-   TO-DO: add filter commands in recover/deploy to trim timing again
+
+#### Modelling!
+
+-    i want to run a model to see how stronglyif drone standard length can predict procedure values, and the same for mass values
+
+    -   need to calculate mass estimate per drone using footprint and length?

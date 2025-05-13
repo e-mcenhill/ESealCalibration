@@ -184,6 +184,130 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="exploring-both-datasets" class="level2">
 <h2 class="anchored" data-anchor-id="exploring-both-datasets">Exploring Both Datasets</h2>
+<section id="the-game-plan" class="level3">
+<h3 class="anchored" data-anchor-id="the-game-plan">The game-plan</h3>
+<ul>
+<li><p>want to merge all female-class data, and with a new column included called “collection.type”</p>
+<ul>
+<li><p>filter out years you don’t need (2004-2015)</p></li>
+<li><p>use sep() function to split the years to year, month, day, and then split by months</p></li>
+</ul></li>
+<li><p>Allison says: would be cool to eventually visualize when drone vs procedure happen(?) in terms of timing spread</p></li>
+<li><p>Splitting the date: initial issues</p>
+<ul>
+<li><p>procedure dataset dates are split into deploy and recover dates, so there are two dates associated with each animal</p></li>
+<li><p>merging will potentially be a little fraught due to this, ask Allison for advice</p></li>
+</ul></li>
+<li><p>Allison advice:</p>
+<ul>
+<li>Pivot(?) or otherwise mutate to make a column called “collection type” with “deploy”, “recovery” and in procedure, and “drone” as the sole option in drone data, so that date can be consolidated into columns called “day” “month” and “year” and be cut via sep() a second time</li>
+</ul></li>
+</ul>
+</section>
+<section id="the-code" class="level3">
+<h3 class="anchored" data-anchor-id="the-code">The code!</h3>
+<section id="splitting" class="level4">
+<h4 class="anchored" data-anchor-id="splitting">Splitting</h4>
+<ul>
+<li>The first section uses separate() to split date values, since they’re written in yyyy-mm-dd formatting, and I use remove=false to keep the original date column instead of erasing it.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#clean up: merged female dataset  ======================================================================</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a> <span class="co">#for comparisons/prediction work </span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="do">###splitting "date" into year/month/day columns ======================================================================</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>drone<span class="fl">.2</span><span class="ot">=</span>drone.cleanv1 <span class="sc">%&gt;%</span> </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(date, <span class="at">into=</span> <span class="fu">c</span>(<span class="st">"year"</span>, <span class="st">"month"</span>, <span class="st">"day"</span>),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>           <span class="at">sep=</span> <span class="st">"-"</span>, <span class="at">remove=</span><span class="cn">FALSE</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>procedure<span class="fl">.2</span><span class="ot">=</span>procedure <span class="sc">%&gt;%</span> </span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(DeployDate, <span class="at">into=</span> <span class="fu">c</span>(<span class="st">"DeployYear"</span>, <span class="st">"DeployMonth"</span>, <span class="st">"DeployDay"</span>), </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>           <span class="at">sep=</span> <span class="st">"-"</span>, <span class="at">remove=</span><span class="cn">FALSE</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(RecoverDate, <span class="at">into=</span> <span class="fu">c</span>(<span class="st">"RecoverYear"</span>, <span class="st">"RecoverMonth"</span>, <span class="st">"RecoverDay"</span>), </span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>           <span class="at">sep=</span> <span class="st">"-"</span>, <span class="at">remove=</span><span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Expected 3 pieces. Missing pieces filled with `NA` in 2 rows [158, 398].
+Expected 3 pieces. Missing pieces filled with `NA` in 2 rows [158, 398].</code></pre>
+</div>
+</div>
+</section>
+<section id="fixing-errors" class="level4">
+<h4 class="anchored" data-anchor-id="fixing-errors">Fixing Errors</h4>
+<ul>
+<li><p>I ran into some issues!</p></li>
+<li><p>There are 2 data values that are in mm/dd/yy formatting in procedure.2, and wouldn’t properly split and became “NA” in the new columns</p>
+<ul>
+<li>these are thankfully outside the date range for procedures that we will be using alongside drone.2, so we can cut them out entirely by cutting rows with “NA” in one of the new columns (I chose Deploy/Recover Years)</li>
+</ul></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="do">####removing the wonky dates:  ======================================================================</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>procedure<span class="fl">.2</span> <span class="ot">&lt;-</span> procedure<span class="fl">.2</span> <span class="sc">%&gt;%</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(DeployYear), <span class="sc">!</span><span class="fu">is.na</span>(RecoverYear))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="numerics" class="level4">
+<h4 class="anchored" data-anchor-id="numerics">Numerics</h4>
+<ul>
+<li>I noticed in a console skim of the new .2 datasets that my new dates were assigned as characters, which is NOT awesome for filtering- to help prevent future issues, I manually assigned each of the new split-date columns in both datasets to be numeric vectors in batches using mutate() and as.numeric()</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="do">###new date columns as numerics ======================================================================</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co">#to fix filtering issues </span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">#as.numeric for drone</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>drone<span class="fl">.2</span><span class="ot">=</span> drone<span class="fl">.2</span> <span class="sc">%&gt;%</span> </span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">day =</span> <span class="fu">as.numeric</span>(day), </span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">month =</span> <span class="fu">as.numeric</span>(month),</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">year =</span> <span class="fu">as.numeric</span>(year))</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="co">#as.numeric for procedure</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>procedure<span class="fl">.2</span><span class="ot">=</span>procedure<span class="fl">.2</span> <span class="sc">%&gt;%</span> </span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">DeployDay =</span> <span class="fu">as.numeric</span>(DeployDay),</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>         <span class="at">RecoverDay =</span> <span class="fu">as.numeric</span>(RecoverDay), </span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>         <span class="at">DeployMonth =</span> <span class="fu">as.numeric</span>(DeployMonth),</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>         <span class="at">RecoverMonth =</span> <span class="fu">as.numeric</span>(RecoverMonth), </span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>         <span class="at">DeployYear =</span> <span class="fu">as.numeric</span>(DeployYear),</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>         <span class="at">RecoverYear =</span> <span class="fu">as.numeric</span>(RecoverYear))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: There were 2 warnings in `mutate()`.
+The first warning was:
+ℹ In argument: `DeployYear = as.numeric(DeployYear)`.
+Caused by warning:
+! NAs introduced by coercion
+ℹ Run `dplyr::last_dplyr_warnings()` to see the 1 remaining warning.</code></pre>
+</div>
+</div>
+</section>
+<section id="first-round-filters-or-statements" class="level4">
+<h4 class="anchored" data-anchor-id="first-round-filters-or-statements">First-Round Filters: OR statements</h4>
+<ul>
+<li>This is some preliminary filtering I did to clean less data when I go to add my “collection type” columns. I’m filtering procedure data to have rows that have at least one date that is within the drone data ranges (2016-2025, and between January and March) I can always split down to the day later, but this gets us in a good “ballpark”</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="do">###filtering procedure.2 data  ======================================================================</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">#to the correct year and month ranges to better fit drone.2</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>procedure<span class="fl">.3</span><span class="ot">=</span>procedure<span class="fl">.2</span> <span class="sc">%&gt;%</span> </span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if year is between 2016-2025 for deploy OR recover years, keep it </span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">between</span>(DeployYear, <span class="dv">2016</span>, <span class="dv">2025</span>)<span class="sc">|</span> <span class="fu">between</span>(RecoverYear, <span class="dv">2016</span>, <span class="dv">2025</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">#if MONTH is between 1-3 for deploy OR recover months, keep it </span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">between</span>(DeployMonth, <span class="dv">1</span>, <span class="dv">3</span>)<span class="sc">|</span><span class="fu">between</span>(RecoverMonth, <span class="dv">1</span>, <span class="dv">3</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="more-cleaning-collection-type-and-date-columns" class="level4">
+<h4 class="anchored" data-anchor-id="more-cleaning-collection-type-and-date-columns">More cleaning: “collection type” and date columns</h4>
+<ul>
+<li><p>In this section, I need to mutate collection type columns into drone.2 and procedure.3.</p>
+<ul>
+<li><p>drone.2 is easy to mutate in since I can just mutate a new column with “drone” as the value</p></li>
+<li><p>In order to do this in procedure.3 , I need to pivot my data first (I think) since right now everything is by field ID, with deploy and recover, but I want each row split in 2, and every seal will be defined across 2 rows (its recovery and its deployment)</p>
+<ul>
+<li>^HELP!! I have no idea if pivot is the right function or how to approach splitting/formatting procedure.3</li>
+</ul></li>
+</ul></li>
+</ul>
+</section>
+</section>
 </section>
 
 </main>
