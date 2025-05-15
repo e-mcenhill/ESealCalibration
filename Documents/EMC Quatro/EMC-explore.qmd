@@ -213,6 +213,16 @@ drone.3=drone.2 %>%
 
 #### Modelling!
 
--    i want to run a model to see how stronglyif drone standard length can predict procedure values, and the same for mass values
+-    i want to run a model to see how strongly if drone standard length can predict procedure values, and the same for mass values
 
     -   need to calculate mass estimate per drone using footprint and length?
+
+    -   use the calculation from the Alvarado paper
+
+        -   EstimatedMassDorsal = (255:43\*Footprint\^1.5) + 4.238 
+
+            EstimatedMassLateral = (268:272\*Footprint\^1.5) + 4.125
+
+    -   plot estimate vs actual mass
+
+-   can get away with gaussian linear model
