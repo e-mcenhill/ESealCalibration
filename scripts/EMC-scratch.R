@@ -88,21 +88,19 @@ procedure.2=procedure.2 %>%
 
 procedure.3=procedure.2 %>% 
   #if year is between 2016-2025 for deploy OR recover years, keep it 
-  filter(between(DeployYear, 2016, 2025)| between(RecoverYear, 2016, 2025)) %>% 
-  #if MONTH is between 1-3 for deploy OR recover months, keep it 
-  filter(between(DeployMonth, 1, 3)|between(RecoverMonth, 1, 3))
+  filter(Season== "PM" & between(RecoverYear, 2016, 2025) & between(RecoverMonth, 1, 3) ) 
 
 
 ###pivoting procedure.3- one consolidated "date" ======================================================================
 
 #splitting into new dataframes by collection type
 
-deploy.1=procedure.3 %>% 
-  dplyr::select(ID,TOPPID, DeployDate, DeployYear, DeployMonth, DeployDay, DeployMass, `Deploy SL`, DeployAdipose) %>% 
-  rename(date=DeployDate, year=DeployYear, month=DeployMonth, day=DeployDay, 
-         mass=DeployMass, std.length=`Deploy SL`, adipose=DeployAdipose) %>% 
-  filter(between(year, 2016, 2025) & between(month, 1, 3)) %>% 
-  mutate('collection type'= "deployment") 
+#deploy.1=procedure.3 %>% 
+  #dplyr::select(ID,TOPPID, DeployDate, DeployYear, DeployMonth, DeployDay, DeployMass, `Deploy SL`, DeployAdipose) %>% 
+  #rename(date=DeployDate, year=DeployYear, month=DeployMonth, day=DeployDay, 
+   #      mass=DeployMass, std.length=`Deploy SL`, adipose=DeployAdipose) %>% 
+  #filter(between(year, 2016, 2025) & between(month, 1, 3)) %>% 
+  #mutate('collection type'= "deployment") 
  
 
 recover.1=procedure.3 %>% 
@@ -178,8 +176,8 @@ typepalette = c(
   ggplot()+
     geom_point(data=drone.female, aes(x=year, y=lateral.mass.est, color= "Lateral Drone Estimate",), alpha=0.7, position=position_jitter(width=0.3))+
     geom_point(data=drone.female, aes(x=year, y=dorsal.mass.est, color="Dorsal Drone Estimate" ), alpha=0.3, position=position_jitter(width=0.3))+
-    geom_point(data= recover.1, aes(x=year, y=mass, color="Recovery Procedure" ), alpha=0.7, position=position_jitter(width=0.2))+
-    geom_point(data=deploy.1, aes(x=year, y=mass, color="Deployment Procedure" ), alpha=0.8, position=position_jitter(width=0.2))+
+    geom_point(data= recover.1, aes(x=year, y=mass, color="Recovery Procedure" ), position=position_jitter(width=0.2))+
+    #geom_point(data=deploy.1, aes(x=year, y=mass, color="Deployment Procedure" ), alpha=0.8, position=position_jitter(width=0.2))+
     scale_color_manual(values = typepalette, name= "Collection Type")+
     labs(title="Mass Trends by Collection Type, 2016-2025", x="Year", y= "Mass (kg)")
     
