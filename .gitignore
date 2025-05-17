@@ -1,1 +1,14 @@
+## R files
+*~
+*.RData
+*.dat
+*.Rproj
+*.Rhistory
+
+## temp mac files
+.DS_Store
+
+# quarto files
+reports/*_files/*
+reports/*_cache/*
 .Rproj.user
