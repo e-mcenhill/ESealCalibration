@@ -1,14 +1,15 @@
-## R files
-*~
-*.RData
-*.dat
-*.Rproj
-*.Rhistory
+# R and RStudio project files
+# ----------------------------------------
+.Rproj.user/         # RStudio project settings
+*.Rhistory           # R command history
+*.RData              # personal workspace stuff
+*.Ruserdata          # Personal settings
+*.Rapp.history       
 
-## temp mac files
-.DS_Store
+# temp mac files
+.DS_Store           #mac-specific stuff
 
-# quarto files
-/*_files/*
-/*_cache/*
-.Rproj.user
+# Quarto files
+*_files/ 
+*_cache/
+
