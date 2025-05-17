@@ -9,6 +9,6 @@
 .DS_Store
 
 # quarto files
-reports/*_files/*
-reports/*_cache/*
+/*_files/*
+/*_cache/*
 .Rproj.user
