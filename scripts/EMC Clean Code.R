@@ -207,7 +207,7 @@ fig1b
 
 fig1ab=fig1a /plot_spacer() /fig1b + 
   plot_layout(heights =c(4,0.2,4), axes="collect")+ 
-  plot_annotation(title="Morphometrics Trends by Collection Type", subtitle= "(2016-2025)", tag_levels = 'A')
+  plot_annotation(title="Adult Female Morphometrics Trends by Collection Type", subtitle= "(2016-2025)", tag_levels = 'A')
 fig1ab
 
 ggsave("Figure 1.png", plot=fig1ab, device=png, path=here::here("images"), width=2200, height=1200, units="px", dpi=320)
