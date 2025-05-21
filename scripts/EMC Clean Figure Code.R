@@ -2,17 +2,20 @@
 library(tidyverse)
 library(here)
 library(patchwork)
+library(lme4)
+library(MuMIn)
 #the files======================================================================
 drone=read_csv(here::here("data/raw/Universal Project Data/uasdata.csv"))
 procedure=read_csv(here::here("data/raw/ESEAL_FORAGING_2024_REVISED.v2.csv"))
-
+calibration=read.csv(here::here("data/raw/UAS_footprint_to_mass_Calibration_Data.csv"))
 #check out the loaded-in frames 
 skimr::skim(drone)
 skimr::skim(procedure)
 
 summary(procedure$`Recover SL`)
 
-###cleaning- changing class/year to a factor ====================================================================== 
+#Female Data: Drone as Predictor for Procedure  ====================================================================== 
+##cleaning- changing class/year to a factor ====================================================================== 
 
 drone.1 <- drone %>%
   mutate(class = relevel(as.factor(class),
@@ -27,21 +30,10 @@ classpalette = c(
   "female" = "#2a9d8f", 
   "pup" = "#9fe9e0")
 
-
-###Drone Trends: dodge polygon length by age class across years  ======================================================================
-
-fig1=ggplot(data=drone.1, mapping = aes(x = year , y = length, color=class))+
-  geom_point(alpha = 0.2, position = position_dodge(width = 0.7)) +
-  #facet_grid(class.f~.,switch='y')+
-  theme_bw()+
-  scale_color_manual(values = classpalette)+
-  labs(y= "Polygon Length (m)", x= "Year", color="Class")
-fig1
-
-#clean up: merged female dataset  ======================================================================
+#cleaning: female datasets  ======================================================================
 #we need to match procedures to the right seasson/time frame- this would be post-molt recovery masses
 #mainly in january but also including anything in febuary and march (when the UAS are flown)
-###splitting "date" into year/month/day columns ======================================================================
+####splitting "date" into year/month/day columns ======================================================================
 drone.2=drone.1 %>% 
   separate(date, into= c("year", "month", "day"),
            sep= "-", remove=FALSE)
@@ -110,7 +102,7 @@ drone.3=drone.2 %>%
 #i want to run a model to see how strongly/if drone standard length (FEMALES) can predict procedure values, and the same for mass values
 #need to calculate mass estimates per drone 
 
-##calculating drone mass estimates  ======================================================================
+###calculating drone mass estimates  ======================================================================
 
 drone.female =drone.3 %>% 
   mutate('lateral.mass.est'=(255.43*area_m2^1.5)+4.238) %>% #calculate lateral mass estimates (alvarado et. al)
@@ -121,7 +113,7 @@ drone.female =drone.3 %>%
 skimr::skim(drone.female)
 
 
-##modelling- gaussian linear model    ======================================================================
+###modelling- gaussian linear model    ======================================================================
 ###need to collect means by year to properly perform a regression- this forces each frame to have an equal amount of values 
 drone.summary=drone.female %>% 
   group_by(year) %>%
@@ -149,20 +141,18 @@ summary(m2)
 
 
 
+###plotting some visualizations: est. vs actual  ======================================================================
 
-##color palette  ======================================================================
+####color palette  ======================================================================
 typepalette = c(
   "Lateral Drone Estimate" = "#EBAA4B", 
   "Dorsal Drone Estimate" = "#EB4900",
   "Drone Length Estimate" = "#F0723A",
   "Drone Estimate"= "#EB4900",
   "Recovery Procedure" = "#9fe9e0")
- #"#009483"
+#"#009483"
 
-
-##plotting some visualizations: est. vs actual  ======================================================================
-
-###Figure 2: Mass Estimations  ======================================================================
+###Figure 1: Mass Estimations  ======================================================================
 fig1a= ggplot()+
   geom_point(data=drone.female, 
              aes(x=date, y=lateral.mass.est, color= "Lateral Drone Estimate"), 
@@ -186,61 +176,75 @@ fig1a= ggplot()+
   labs(x= "Year", y= "Mass (kg)")
 fig1a
 
-###Figure 3: Length Estimations  ======================================================================
-fig1b= ggplot()+
-  geom_point(data=drone.female, 
-             aes(x=date, y=length, color="Drone Estimate" ), 
-             alpha=0.7, 
-             position=position_jitter(width=100))+
-  geom_point(data= recover.1, 
-             aes(x=date, y=std.length, color="Recovery Procedure" ), 
-             position=position_jitter(width=100))+
-#  geom_line(data=drone.summary, 
-#            aes(x=year, y=mean.length, color= "Drone Estimate"))+
-#  geom_line(data= recover.summary, 
-#            aes(x=year, y=mean.length, color="Recovery Procedure"))+
-  scale_color_manual(values = typepalette, name= "Collection Type")+
-  scale_x_date(date_breaks= "year", date_labels= "%Y")+
+#Weanling Data: Calibration and Mass Estimates   ======================================================================
+head(calibration)
+
+###cleaning: weanling dataset   ======================================================================
+weanling.1=calibration %>% 
+  rename(flight.date = X2025.04.11, 
+         days.since.wean=days.btwn) %>% 
+  filter(Class == "wean") %>% 
+  mutate(wean.mass=mass.act*abs(exp(0.00596 * days.since.wean)), #this is from Holsner et. al. 2021
+         rate.mass.loss= 7.6-(0.02*wean.mass), #this is from Noren et. al. 2003
+         days.to.flight = as.numeric(ymd(flight.date) - ymd(wean.date)), 
+         flight.mass = wean.mass - (rate.mass.loss * days.to.flight * (wean.mass / 1000))) #this is using the rate combined with days between weaning and drone flight to calculate mass on flight day
+head(weanling.1)  
+write_csv(weanling.1,"./data/cleaned/weanling.calibration.csv" )
+
+###linear modelling- footprint estimates ======================================================================
+#preliminary modelling: 
+
+#linear 
+wean.linear= lm(flight.mass ~ area.m2, data = weanling.1)
+summary(wean.linear)
+
+#mixed effects with tag as a random effect?
+wean.mixed= lmer(flight.mass ~ area.m2 + (1 | Tag), data = weanling.1)
+summary(wean.mixed)
+
+#using the 1.5 power scaleing 
+weanling.2= weanling.1 %>% 
+  mutate(area1.5= weanling.1$area.m2^1.5)
+wean.model1.5= lmer(flight.mass ~ area1.5 + (1 | Tag), data = weanling.2)
+summary(wean.model1.5)
+
+
+AIC(wean.linear, wean.mixed, wean.model1.5)
+#1.5 slightly better 
+
+#Equation pulled from best model following alvarado formatting:
+
+#Estimated Mass (kg)= (171.14×(Footprint Area)^1.5) +52.83
+#                    est.^.                          est^
+
+###errors! ======================================================================
+#predicted masses 
+weanling.2=weanling.2 %>% 
+  mutate(predicted.mass = 52.83 + 171.14 * area1.5, 
+         residual.err= flight.mass - predicted.mass, 
+         percent.error = (residual.err / flight.mass * 100))
+
+#mean +/- SD error
+mean_residual= mean(weanling.2$residual)
+sd_residual= sd(weanling.2$residual)
+
+#summarize!!! 
+cat("Residual error (mean ± SD): ", round(mean_residual, 2), " ± ", round(sd_residual, 2), " kg\n")
+#Residual error (mean ± SD):  -0.08  ±  13.14  kg
+
+
+##visualizing: trying to use Alvarado's formatting 
+#predicted vs acutal: 
+fig2= ggplot(weanling.1, aes(x = predicted.mass, y = flight.mass)) +
+  geom_point(color = "lightblue", size = 3) +        # points for each observation
+  geom_abline(slope = 1, intercept = 0,         # 1:1 line for perfect prediction
+              color = "orangered", linetype = "dashed") +
   theme_minimal()+
-  labs(x="Year", y= "Length (cm)")
-fig1b
+  labs(title = "Predicted vs Actual Mass in Weanling Seals",
+       x = "Predicted Mass (kg)",
+       y = "Mass on Flight Day (kg)")
+fig2 
 
-fig1ab=fig1a /plot_spacer() /fig1b + 
-  plot_layout(heights =c(4,0.2,4), axes="collect")+ 
-  plot_annotation(title="Adult Female Morphometrics Trends by Collection Type", subtitle= "(2016-2025)", tag_levels = 'A')
-fig1ab
-
-ggsave("Figure 1.png", plot=fig1ab, device=png, path=here::here("images"), width=2200, height=1200, units="px", dpi=320)
+#T tests- seeing if error is statistically significant 
 
 
-#WIP: maybe separate patches for mean lines 
-# fig2a= ggplot()+
-#   geom_line(data=drone.summary, 
-#           aes(x=year, y=mean.lateral, color= "Lateral Drone Estimate"))+
-#   geom_line(data= recover.summary, 
-#             aes(x=year, y=mean.mass, color="Recovery Procedure"))+
-#   scale_color_manual(values = typepalette, name= "Collection Type")+
-#   scale_x_date(date_breaks= "year", date_labels= "%Y")+
-#   theme_minimal()+
-#   ylim(300,850)+
-#   theme(axis.title.x=element_blank(),
-#         axis.text.x=element_blank(),
-#         axis.ticks.x=element_blank()) #+
-#   #labs(title="Morphometrics Trends by Collection Type, 2016-2025", y= "Mean Mass (kg)")
-# fig2a
-#   
-# fig2b= ggplot()+
-#   geom_line(data=drone.summary, 
-#             aes(x=year, y=mean.length, color= "Drone Estimate" ))+
-#   geom_line(data= recover.summary, 
-#             aes(x=year, y=mean.length, color="Recovery Procedure"))+
-#   scale_color_manual(values = typepalette, name= "Collection Type")+
-#   scale_x_date(date_breaks= "year", date_labels= "%Y")+
-#   theme_minimal()+
-#   labs(x="Year", y= "Mean Length (cm)")
-# fig2b
-# 
-# fig2ab=fig2a /fig2b
-# fig2ab
-# 
-# fig2ab/fig1ab
