@@ -12,3 +12,8 @@
 *_cache/
 .Rproj.user
 .Rhistory
+#targets stuff 
+_targets/
+
+#temp 
+temp/
